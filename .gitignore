@@ -2,3 +2,7 @@ reports.py
 leethal.db
 assets
 __pycache__
+dist
+build
+main.spec
+installer.iss

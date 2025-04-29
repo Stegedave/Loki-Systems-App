@@ -239,27 +239,35 @@ def build_monthly_report_frame():
 
 # --- Archive and Reset Services Function ---
 def archive_and_reset_services():
-    from database import fetch_all_services
+    from database import fetch_all_services, get_db_path
     services = fetch_all_services()
 
     if services:
         now = datetime.datetime.now()
-        filename = f"{now.strftime('%B_%Y')}.csv"
-        with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        month_name = now.strftime("%B")
+        year = now.year
+        filename = f"{month_name}_{year}.csv"
+
+        # Save to same directory as the DB (AppData)
+        save_dir = os.path.dirname(get_db_path())
+        full_path = os.path.join(save_dir, filename)
+
+        with open(full_path, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(["ID", "Date", "Time", "Service Provided", "Service Fee", "Service Notes"])
             for service in services:
                 writer.writerow(service)
 
-        conn = sqlite3.connect('leethal.db')
+        # Reset the database
+        conn = sqlite3.connect(get_db_path())
         c = conn.cursor()
         c.execute('DELETE FROM services')
         conn.commit()
         conn.close()
 
-        messagebox.showinfo("Success", f"Data archived to {filename} and services reset!")
+        messagebox.showinfo("Success", f"Data archived to {full_path} and services reset!")
     else:
-        messagebox.showinfo("No Data", "No data to archive.")
+        messagebox.showinfo("No Data", "No services to archive.")
 
 # --- Button Actions ---
 new_service_button.config(command=lambda: (build_new_service_frame(), show_frame('NewEntry')))
