@@ -4,6 +4,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from PIL import Image, ImageTk
 import sqlite3
 import csv
 import datetime
@@ -36,12 +37,44 @@ root.resizable(True, True)
 # --- Create database if it doesn't exist ---
 create_database()
 
+# ------------------------------------------
+# --- Load and resize the logo image ---
+logo_img = Image.open("logo.jpg")  # Make sure logo.jpg is in the same folder
+logo_img = logo_img.resize((200, 200))  # Resize as needed
+logo_photo = ImageTk.PhotoImage(logo_img)
+
+# Assign the img to root to prevent garbage collection
+root.logo_photo = logo_photo
+
+# Creating label with the image
+logo_label = tk.Label(root, image=root.logo_photo, bg=COLOR_DARK_BLUE)
+logo_label.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
+
+# -- functions to show and hide logo --
+def show_logo():
+    '''show the logo'''
+    print('showing logo')
+    logo_label.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
+
+def hide_logo():
+    '''Hide the logo'''
+    logo_label.place_forget()
 # --- Frame system ---
 frames = {}
 
 def show_frame(name):
+    '''Switch between frames while handling the logo visibility'''
+    if name in ['Home', 'NewEntry', 'MonthlyReport']:
+        if not logo_label.winfo_ismapped():  # If the logo is not currently mapped
+            show_logo()  # Show the logo when switching to these frames
+    else:
+        if logo_label.winfo_ismapped():  # If the logo is currently mapped
+            hide_logo()  # Hide the logo for frames like ViewServices
+
+    # Raise the specified frame
     frame = frames[name]
     frame.tkraise()
+# ------------------------------------------
 
 # --- Styling ---
 style = ttk.Style()
@@ -65,6 +98,11 @@ style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
 # --- Home Frame ---
 home_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 home_frame.grid(row=0, column=0, sticky='nsew')
+
+#-------------------------------------------------
+# Add the logo to the right side
+logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
+logo_wrapper.pack(side="right", fill="y", padx=20)
 
 title_label = tk.Label(home_frame, text='Loki Systems', font=('Segoe UI', 28, 'bold'), fg=COLOR_WHITE, bg=COLOR_DARK_BLUE)
 title_label.pack(pady=20)
@@ -187,7 +225,7 @@ def build_view_services_frame():
 
     ttk.Button(button_frame, text='🗑️ Delete Selected Service', command=delete_selected).pack(pady=5)
     ttk.Button(button_frame, text='🏠 Home', command=lambda: show_frame('Home')).pack(pady=5)
-
+    
 # --- Monthly Report Frame ---
 monthly_report_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 monthly_report_frame.grid(row=0, column=0, sticky='nsew')
