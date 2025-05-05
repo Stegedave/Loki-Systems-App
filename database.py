@@ -20,7 +20,7 @@ def create_database():
             date TEXT,
             time TEXT,
             service_provided TEXT,
-            service_fee TEXT,
+            service_fee REAL,
             service_notes TEXT
         )
     ''')

@@ -11,6 +11,7 @@ import datetime
 from database import create_database
 import os 
 
+
 # --- Global Styles ---
 global_font = ("Segoe UI", 12)
 
@@ -131,7 +132,7 @@ def show_frame(name):
 
 def go_home():
     show_frame('Home')
-
+# -- save new service entries --
 def build_new_service_frame():
     for widget in new_entry_frame.winfo_children():
         widget.destroy()
@@ -166,8 +167,8 @@ def build_new_service_frame():
         entries[field] = entry
 
     def save_service():
-        data = {field: entry.get() for field, entry in entries.items()}
-        
+        data = {field: entry.get().strip() for field, entry in entries.items()}
+
         # call save_service_record function
         from database import save_service_record
         save_service_record(data)
@@ -186,6 +187,7 @@ view_services_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 view_services_frame.grid(row=0, column=0, sticky='nsew')
 frames['ViewServices'] = view_services_frame
 
+# -- deletes single or multiple entries from database --- (using ctrl OR shift for mutliple selection) --
 def build_view_services_frame():
     for widget in view_services_frame.winfo_children():
         widget.destroy()
@@ -213,8 +215,15 @@ def build_view_services_frame():
     y_scroll = tk.Scrollbar(table_frame, orient='vertical')
     x_scroll = tk.Scrollbar(table_frame, orient='horizontal')
 
-    tree = ttk.Treeview(table_frame, columns=columns, show='headings',
-                        yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+    tree = ttk.Treeview(
+        table_frame,
+        columns=columns,
+        show='headings',
+        yscrollcommand=y_scroll.set,
+        xscrollcommand=x_scroll.set,
+        selectmode='extended'  # Enables multi-select with Ctrl/Shift
+    )
+
     y_scroll.config(command=tree.yview)
     x_scroll.config(command=tree.xview)
 
@@ -234,18 +243,37 @@ def build_view_services_frame():
     button_frame = tk.Frame(view_services_frame, bg=COLOR_DARK_BLUE)
     button_frame.grid(row=2, column=0, pady=10)
 
+    # will detele a single entry or multiple using ctrl + shift
     def delete_selected():
-        selected_item = tree.selection()
-        if selected_item:
-            item_id = selected_item[0]
-            service = tree.item(item_id)['values']
-            service_id = service[0]
-            confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this service?")
-            if confirm:
-                from database import delete_service
-                delete_service(service_id)
-                tree.delete(item_id)
-                messagebox.showinfo("Deleted", f"Service ID {service_id} deleted!")
+        selected_items = tree.selection()
+
+        if not selected_items:
+            messagebox.showwarning("No Selection", "Please select one or more services to delete.")
+            return
+
+        confirm = messagebox.askyesno(
+            "Confirm Delete",
+            f"Are you sure you want to delete {len(selected_items)} selected service(s)?"
+        )
+        
+        if confirm:
+            from database import delete_service
+            deleted_ids = []
+
+            for item_id in selected_items:
+                try:
+                    service = tree.item(item_id)['values']
+                    service_id = service[0]
+                    delete_service(service_id)
+                    tree.delete(item_id)
+                    deleted_ids.append(str(service_id))
+                except Exception as e:
+                    print(f"Error deleting service ID {service_id}: {e}")
+
+            if deleted_ids:
+                messagebox.showinfo("Deleted", f"Deleted service ID(s): {', '.join(deleted_ids)}")
+            else:
+                messagebox.showinfo("No Deletion", "No services were deleted.")
 
     ttk.Button(button_frame, text='🗑️ Delete Selected Service', command=delete_selected).grid(pady=5)
     ttk.Button(button_frame, text='🏠 Home', command=lambda: go_home()).grid(pady=5)
@@ -255,29 +283,57 @@ monthly_report_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 monthly_report_frame.grid(row=0, column=0, sticky='nsew')
 frames['MonthlyReport'] = monthly_report_frame
 
-def build_monthly_report_frame():
-    for widget in monthly_report_frame.winfo_children():
-        widget.destroy()
-
-    label = tk.Label(monthly_report_frame, text="📈 Monthly Report", font=('Segoe UI', 22, 'bold'), fg=COLOR_RED, bg=COLOR_DARK_BLUE)
-    label.grid(row=0, column=0, pady=(10, 20))
-
-    from database import fetch_all_services
-    services = fetch_all_services()
-
-    now = datetime.datetime.now()
-    current_month = now.strftime("%Y-%m")
-
-    total_earnings = 0
-    service_count = 0
-    service_types = {}
-
-    for service in services:
-        raw_date = service[1]
+# -- parse date and append 20 to date (EG if date is 25-04-01 it becomes 2025-04-01) --
+def try_parse_date(date_str):
+    from datetime import datetime
+    # try to parse the data with both formats
+    for fmt in ("%y-%m-%d", "%y-%m-%d"): # attempt both formats
         try:
-            clean_date = raw_date.strip()
-            service_date = datetime.datetime.strptime(clean_date, "%Y-%m-%d")
-            if service_date.strftime("%Y-%m") == current_month:
+            if fmt == "%y,%m,%d":
+                # If using %y-%m-%d format, prepend '20' to the two-digit year
+                date_str = '20' + date_str.strip()
+            return datetime.strptime(date_str.strip(), fmt)
+        except ValueError:
+            continue
+    return None  # Return None if parsing fails
+
+# -- build monthly report and show graph using matplotlib --
+def build_monthly_report_frame():
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    import matplotlib.pyplot as plt  # Corrected import
+
+    try:
+        # Clear existing widgets
+        for widget in monthly_report_frame.winfo_children():
+            widget.destroy()
+
+        # Add title label
+        label = tk.Label(monthly_report_frame, text="📈 Monthly Report", font=('Segoe UI', 22, 'bold'), fg=COLOR_RED, bg=COLOR_DARK_BLUE)
+        label.grid(row=0, column=0, pady=(10, 20))
+
+        # Fetch data from the database
+        from database import fetch_all_services
+        services = fetch_all_services()
+
+        if not services:
+            # If no data in the database
+            tk.Label(monthly_report_frame, text="No data available in the database.", font=('Segoe UI', 14), fg='red', bg=COLOR_DARK_BLUE).grid(row=1, column=0, pady=20)
+            ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda: go_home()).grid(row=2, column=0, pady=20)
+            return  # Exit the function early if there is no data
+
+        now = datetime.datetime.now()
+        current_month = now.strftime("%Y-%m")
+
+        total_earnings = 0
+        service_count = 0
+        service_types = {}
+
+        # Process each service
+        for service in services:
+            raw_date = service[1]
+            service_date = try_parse_date(raw_date)
+            
+            if service_date and service_date.strftime("%Y-%m") == current_month:
                 try:
                     total_earnings += float(service[4])
                 except:
@@ -285,21 +341,55 @@ def build_monthly_report_frame():
                 service_count += 1
                 service_name = service[3]
                 service_types[service_name] = service_types.get(service_name, 0) + 1
-        except Exception as e:
-            print(f"Date parse failed: {raw_date} -> {e}")
 
-    most_common_service = max(service_types, key=service_types.get) if service_types else "N/A"
+        most_common_service = max(service_types, key=service_types.get) if service_types else "N/A"
 
-    tk.Label(monthly_report_frame, text=f"Total Earnings: /= {total_earnings:.2f}",
-         font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=1, column=0, pady=5, sticky="w", padx=20)
+        # Display stats
+        tk.Label(monthly_report_frame, text=f"Total Earnings: /={total_earnings:.2f}",
+                 font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=1, column=0, pady=5, sticky="w", padx=20)
 
-    tk.Label(monthly_report_frame, text=f"Total Services Provided: {service_count}",
-         font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=2, column=0, pady=5, sticky="w", padx=20)
+        tk.Label(monthly_report_frame, text=f"Total Services Provided: {service_count}",
+                 font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=2, column=0, pady=5, sticky="w", padx=20)
 
-    tk.Label(monthly_report_frame, text=f"Most Popular Service: {most_common_service}",
-         font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=3, column=0, pady=5, sticky="w", padx=20)
+        tk.Label(monthly_report_frame, text=f"Most Popular Service: {most_common_service}",
+                 font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=3, column=0, pady=5, sticky="w", padx=20)
 
-    ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda:go_home()).grid(row=4, column=0, pady=20)
+        # --- Plot service frequency as a bar chart ---
+        if service_types:
+            fig, ax = plt.subplots(figsize=(max(6, len(service_types) * 0.8), 2.8), dpi=100)
+            services = list(service_types.keys())
+            counts = list(service_types.values())
+
+            ax.bar(services, counts, color=COLOR_GREEN)
+            ax.set_title("Service Frequency")
+            ax.set_xlabel("Service Type")
+            ax.set_ylabel("Count")
+            ax.tick_params(axis='x', rotation=45)
+            plt.tight_layout()
+
+            # -- Embed the chart in the Tkinter window --
+            chart = FigureCanvasTkAgg(fig, monthly_report_frame)
+            chart.get_tk_widget().grid(row=4, column=0, pady=10, sticky="nsew")
+
+            # -- Make the chart widget expand and shrink with window resizing --
+            monthly_report_frame.grid_rowconfigure(4, weight=1)
+            monthly_report_frame.grid_columnconfigure(0, weight=1)
+            
+            chart.draw()
+
+        else:
+            # -- If no data for the current month -- 
+            tk.Label(monthly_report_frame, text="No data available for this month.", font=('Segoe UI', 14), fg='red', bg=COLOR_DARK_BLUE).grid(row=4, column=0, pady=20)
+
+        # -- Add home button -- 
+        ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda: go_home()).grid(row=5, column=0, pady=20)
+
+    except Exception as e:
+        print(f"Error building monthly report frame: {e}")
+        
+        # -- Show error message on the UI --
+        error_label = tk.Label(monthly_report_frame, text="Error loading report. Please try again.", font=('Segoe UI', 14), fg='red', bg=COLOR_DARK_BLUE)
+        error_label.grid(row=1, column=0, pady=10)
 
 # --- Archive and Reset Services Function ---
 def archive_and_reset_services():
