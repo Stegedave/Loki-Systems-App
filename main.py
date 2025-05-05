@@ -202,8 +202,6 @@ def build_view_services_frame():
     view_services_frame.grid_rowconfigure(1, weight=1)
     view_services_frame.grid_columnconfigure(0, weight=1)
 
-
-
     columns = ("ID", "Date", "Time", "Service", "Fee", "Notes")
 
     table_frame = tk.Frame(view_services_frame, bg=COLOR_DARK_BLUE)
@@ -235,7 +233,6 @@ def build_view_services_frame():
 
     button_frame = tk.Frame(view_services_frame, bg=COLOR_DARK_BLUE)
     button_frame.grid(row=2, column=0, pady=10)
-# ------------------------------------------------
 
     def delete_selected():
         selected_item = tree.selection()
@@ -301,7 +298,6 @@ def build_monthly_report_frame():
 
     tk.Label(monthly_report_frame, text=f"Most Popular Service: {most_common_service}",
          font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).grid(row=3, column=0, pady=5, sticky="w", padx=20)
-
 
     ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda:go_home()).grid(row=4, column=0, pady=20)
 
