@@ -41,13 +41,13 @@ create_database()
 
 # -- functions to show and hide logo --
 def show_logo():
-    '''show the logo'''
-    print('showing logo')
-    logo_label.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
+    '''Show the logo'''
+    logo_label.pack(anchor='ne', padx=10, pady=30)
 
 def hide_logo():
     '''Hide the logo'''
-    logo_label.place_forget()
+    logo_label.pack_forget()
+
 
 # --- Frame system ---
 frames = {}
@@ -56,8 +56,12 @@ def show_frame(name):
     frame = frames[name]
     frame.tkraise()
 
+    if name == "Home":
+        logo_label.pack(anchor='ne', padx=10, pady=10)
+    else:
+        logo_label.pack_forget()
+
 def go_home():
-    # show_logo()
     show_frame('Home')
 
 # --- Styling ---
@@ -83,20 +87,19 @@ style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
 home_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 home_frame.grid(row=0, column=0, sticky='nsew')
 
-
-# Add the logo to the right side
+# -- Add the logo to the right side --
 logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
-logo_wrapper.pack(side="right", fill="y", padx=20)
+logo_wrapper.pack(side="right", fill="y", padx=60)
+
 
 # -- Load and display the logo inside logo_wrapper --
 logo_img = Image.open("logo.jpg")  # Make sure logo.jpg is in the same folder
 logo_img = logo_img.resize((200, 200))  # Resize as needed
 logo_photo = ImageTk.PhotoImage(logo_img)  # Create PhotoImage object
 
-# No need to assign it to root
+# No need to assign it root
 logo_label = tk.Label(logo_wrapper, image=logo_photo, bg=COLOR_DARK_BLUE)
 logo_label.photo = logo_photo  # Save a reference to the image to avoid garbage collection
-logo_label.pack(anchor='ne', padx=10, pady=10)
 
 title_label = tk.Label(home_frame, text='Loki Systems', font=('Segoe UI', 28, 'bold'), fg=COLOR_WHITE, bg=COLOR_DARK_BLUE)
 title_label.pack(pady=20)
@@ -176,10 +179,12 @@ view_services_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 view_services_frame.grid(row=0, column=0, sticky='nsew')
 frames['ViewServices'] = view_services_frame
 
+# --------------------------------------------
 def build_view_services_frame():
     for widget in view_services_frame.winfo_children():
         widget.destroy()
-
+    
+    # -- resizeable window & table --
     view_services_frame.rowconfigure(1, weight=1)
     view_services_frame.columnconfigure(0, weight=1)
 
@@ -221,6 +226,7 @@ def build_view_services_frame():
 
     button_frame = tk.Frame(view_services_frame, bg=COLOR_DARK_BLUE)
     button_frame.grid(row=2, column=0, pady=10)
+# ------------------------------------------------
 
     def delete_selected():
         selected_item = tree.selection()
