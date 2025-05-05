@@ -9,6 +9,8 @@ import sqlite3
 import csv
 import datetime
 from database import create_database
+import os 
+
 
 # --- Global Styles ---
 global_font = ("Segoe UI", 12)
@@ -37,19 +39,6 @@ root.resizable(True, True)
 # --- Create database if it doesn't exist ---
 create_database()
 
-# ------------------------------------------
-# --- Load and resize the logo image ---
-logo_img = Image.open("logo.jpg")  # Make sure logo.jpg is in the same folder
-logo_img = logo_img.resize((200, 200))  # Resize as needed
-logo_photo = ImageTk.PhotoImage(logo_img)
-
-# Assign the img to root to prevent garbage collection
-root.logo_photo = logo_photo
-
-# Creating label with the image
-logo_label = tk.Label(root, image=root.logo_photo, bg=COLOR_DARK_BLUE)
-logo_label.place(relx=1.0, rely=0.0, anchor='ne', x=-20, y=20)
-
 # -- functions to show and hide logo --
 def show_logo():
     '''show the logo'''
@@ -59,22 +48,17 @@ def show_logo():
 def hide_logo():
     '''Hide the logo'''
     logo_label.place_forget()
+
 # --- Frame system ---
 frames = {}
 
 def show_frame(name):
-    '''Switch between frames while handling the logo visibility'''
-    if name in ['Home', 'NewEntry', 'MonthlyReport']:
-        if not logo_label.winfo_ismapped():  # If the logo is not currently mapped
-            show_logo()  # Show the logo when switching to these frames
-    else:
-        if logo_label.winfo_ismapped():  # If the logo is currently mapped
-            hide_logo()  # Hide the logo for frames like ViewServices
-
-    # Raise the specified frame
     frame = frames[name]
     frame.tkraise()
-# ------------------------------------------
+
+def go_home():
+    # show_logo()
+    show_frame('Home')
 
 # --- Styling ---
 style = ttk.Style()
@@ -99,10 +83,20 @@ style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
 home_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 home_frame.grid(row=0, column=0, sticky='nsew')
 
-#-------------------------------------------------
+
 # Add the logo to the right side
 logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
 logo_wrapper.pack(side="right", fill="y", padx=20)
+
+# -- Load and display the logo inside logo_wrapper --
+logo_img = Image.open("logo.jpg")  # Make sure logo.jpg is in the same folder
+logo_img = logo_img.resize((200, 200))  # Resize as needed
+logo_photo = ImageTk.PhotoImage(logo_img)  # Create PhotoImage object
+
+# No need to assign it to root
+logo_label = tk.Label(logo_wrapper, image=logo_photo, bg=COLOR_DARK_BLUE)
+logo_label.photo = logo_photo  # Save a reference to the image to avoid garbage collection
+logo_label.pack(anchor='ne', padx=10, pady=10)
 
 title_label = tk.Label(home_frame, text='Loki Systems', font=('Segoe UI', 28, 'bold'), fg=COLOR_WHITE, bg=COLOR_DARK_BLUE)
 title_label.pack(pady=20)
@@ -133,21 +127,39 @@ def build_new_service_frame():
     for widget in new_entry_frame.winfo_children():
         widget.destroy()
 
+    # automatically get today's date 
+    today_date = datetime.datetime.now().strftime("%y-%m-%d")
+    current_time = datetime.datetime.now().strftime("%H:%M")  # Format: HH:MM
+
     label = tk.Label(new_entry_frame, text="🚀 New Service Entry", font=('Segoe UI', 22, 'bold'), fg=COLOR_RED, bg=COLOR_DARK_BLUE)
     label.pack(pady=10)
 
     fields = ["Date (YYYY-MM-DD)", "Time (HH:MM)", "Service Provided", "Service Fee", "Service Notes"]
     entries = {}
 
+    # Date entry field is pre-populated with today's date
     for field in fields:
         field_label = tk.Label(new_entry_frame, text=field, font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE)
-        field_label.pack(pady=(5,0))
-        entry = ttk.Entry(new_entry_frame, width=40, font=global_font)
-        entry.pack(pady=(0,10))
+        field_label.pack(pady=(5, 0))
+
+        if field == "Date (YYYY-MM-DD)":
+            # Pre-fill the date field with today's date
+            entry = ttk.Entry(new_entry_frame, width=40, font=global_font)
+            entry.insert(0, today_date)  # Insert today's date into the entry box
+        elif field == "Time (HH:MM)":
+            # Pre-fill the time field with the current time
+            entry = ttk.Entry(new_entry_frame, width=40, font=global_font)
+            entry.insert(0, current_time)  # Insert current time into the entry box
+        else:
+            entry = ttk.Entry(new_entry_frame, width=40, font=global_font)
+        
+        entry.pack(pady=(0, 10))
         entries[field] = entry
 
     def save_service():
         data = {field: entry.get() for field, entry in entries.items()}
+        
+        # call save_service_record function
         from database import save_service_record
         save_service_record(data)
         messagebox.showinfo("Success", "Service saved successfully!")
@@ -156,7 +168,7 @@ def build_new_service_frame():
     save_button = ttk.Button(new_entry_frame, text='💾 Save Entry', command=save_service)
     save_button.pack(pady=10)
 
-    home_button = ttk.Button(new_entry_frame, text='🏠 Home', command=lambda: show_frame('Home'))
+    home_button = ttk.Button(new_entry_frame, text='🏠 Home', command=lambda:go_home())
     home_button.pack(pady=10)
 
 # --- View Services Frame ---
@@ -224,7 +236,7 @@ def build_view_services_frame():
                 messagebox.showinfo("Deleted", f"Service ID {service_id} deleted!")
 
     ttk.Button(button_frame, text='🗑️ Delete Selected Service', command=delete_selected).pack(pady=5)
-    ttk.Button(button_frame, text='🏠 Home', command=lambda: show_frame('Home')).pack(pady=5)
+    ttk.Button(button_frame, text='🏠 Home', command=lambda: go_home()).pack(pady=5)
     
 # --- Monthly Report Frame ---
 monthly_report_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
@@ -273,7 +285,7 @@ def build_monthly_report_frame():
     tk.Label(monthly_report_frame, text=f"Most Popular Service: {most_common_service}",
              font=global_font, fg=COLOR_GREEN, bg=COLOR_DARK_BLUE).pack(pady=5)
 
-    ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda: show_frame('Home')).pack(pady=20)
+    ttk.Button(monthly_report_frame, text='🏠 Home', command=lambda:go_home()).pack(pady=20)
 
 # --- Archive and Reset Services Function ---
 def archive_and_reset_services():
