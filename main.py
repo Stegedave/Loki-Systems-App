@@ -11,7 +11,6 @@ import datetime
 from database import create_database
 import os 
 
-
 # --- Global Styles ---
 global_font = ("Segoe UI", 12)
 
@@ -47,7 +46,6 @@ def show_logo():
 def hide_logo():
     '''Hide the logo'''
     logo_label.pack_forget()
-
 
 # --- Frame system ---
 frames = {}
@@ -87,7 +85,7 @@ style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
 home_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 home_frame.grid(row=0, column=0, sticky='nsew')
 
-# -- Add the logo to the right side --
+# -- Add the logo to the right side
 logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
 logo_wrapper.pack(side="right", fill="y", padx=60)
 
@@ -243,7 +241,7 @@ def build_view_services_frame():
 
     ttk.Button(button_frame, text='🗑️ Delete Selected Service', command=delete_selected).pack(pady=5)
     ttk.Button(button_frame, text='🏠 Home', command=lambda: go_home()).pack(pady=5)
-    
+
 # --- Monthly Report Frame ---
 monthly_report_frame = tk.Frame(root, bg=COLOR_DARK_BLUE, padx=20, pady=20)
 monthly_report_frame.grid(row=0, column=0, sticky='nsew')
