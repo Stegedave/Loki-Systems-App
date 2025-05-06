@@ -9,9 +9,22 @@ import sqlite3
 import csv
 import datetime
 from database import create_database
-import os 
+import sys
+import os
 
 
+# ----------------------
+8 # hopefully fixes issue with main.exe
+
+def resource_path(relative_path):
+    '''Get global path to resource (compatible with pyinstaller) '''
+    try:
+        base_path = sys.MEIPASS # Py installer uses this
+    except AttributeError:
+        base_path = os.path.abspath(".") # running normally
+    return os.path.join(base_path, relative_path)
+
+#-----------------------
 # --- Global Styles ---
 global_font = ("Segoe UI", 12)
 
@@ -75,7 +88,9 @@ logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
 logo_wrapper.grid(row=0, column=1, sticky="nsew", padx=60)
 
 # -- Load and display the logo inside logo_wrapper --
-logo_img = Image.open("logo.jpg")  # Make sure logo.jpg is in the same folder
+# ------------------------------------------
+logo_img = Image.open(resource_path("logo.jpg")) # Make sure logo.jpg is in the same folder
+# ------------------------------------------
 logo_img = logo_img.resize((140, 140))  # Resize as needed
 logo_photo = ImageTk.PhotoImage(logo_img)  # Create PhotoImage object
 
