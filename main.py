@@ -86,20 +86,20 @@ home_frame.grid_rowconfigure(0, weight=1)
 # -- load and display logo --
 logo_wrapper = tk.Frame(home_frame, bg=COLOR_DARK_BLUE)
 logo_wrapper.grid(row=0, column=1, sticky="nsew", padx=60)
+logo_wrapper.grid_rowconfigure(0, weight=1)
+logo_wrapper.grid_columnconfigure(0, weight=1)
 
 # -- Load and display the logo inside logo_wrapper --
-# ------------------------------------------
-logo_img = Image.open(resource_path("logo.jpg")) # Make sure logo.jpg is in the same folder
-# ------------------------------------------
-logo_img = logo_img.resize((140, 140))  # Resize as needed
-logo_photo = ImageTk.PhotoImage(logo_img)  # Create PhotoImage object
+logo_img = Image.open(resource_path("LOKI-LOGO.png"))
+logo_img = logo_img.resize((140, 140)) # Resize as needed
+logo_photo = ImageTk.PhotoImage(logo_img) # Create PhotoImage object
 
 # -- Label to hold logo in place --
 logo_label = tk.Label(root, image=logo_photo, bg=COLOR_DARK_BLUE)
-logo_label.photo = logo_photo  # Save a reference to the image to avoid garbage collection
+logo_label.photo = logo_photo # Save a reference to the image to avoid garbage collection
 
 # Position it fixed at top-right using place() method
-logo_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=20)  # Adjust position as needed
+logo_label.place(relx=1.0, rely=0.5, anchor="ne", x=-50, y=20) # Adjust position as needed
 
 # Always float above other widgets
 logo_label.lift()
